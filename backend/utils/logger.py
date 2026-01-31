@@ -23,7 +23,7 @@ def setup_logger(name: str = "roadsense", level: int = logging.INFO) -> logging.
     
     #console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    cosnole_handler.setLevel(level)
+    console_handler.setLevel(level)
 
     formatter = logging.Formatter(
         "[%(asctime)s] %(name)s - %(levelname)s - %(message)s",
