@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#21D4C2"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="640" rx="72" fill="#0b1b1d"/>
+  <!-- pentagonal/circuit motif -->
+  <g fill="none" stroke="url(#g)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" transform="translate(80,70)">
+    <path d="M240 20 L440 120 L440 320 L240 420 L40 320 L40 120 Z"/>
+    <path d="M240 70 L395 150 L395 290 L240 370 L85 290 L85 150 Z"/>
+    <path d="M240 120 L350 180 L350 260 L240 320 L130 260 L130 180 Z"/>
+    <!-- center node + “stem” -->
+    <circle cx="240" cy="235" r="28"/>
+    <path d="M240 263 L240 330"/>
+    <!-- little circuit pads -->
+    <circle cx="110" cy="220" r="7"/>
+    <circle cx="370" cy="220" r="7"/>
+  </g>
+  <!-- text -->
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-weight="800" fill="#E8F0F2" text-anchor="middle">
+    <text x="320" y="545" font-size="60" letter-spacing="2">HACK THE FUTURE</text>
+  </g>
+</svg>

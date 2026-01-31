@@ -1,0 +1,13 @@
+{
+    "name": "hackthefutures",
+    "version": "1.0.0",
+    "description": "Bare-bones local site for Hack the Future hackathon.",
+    "private": true,
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {
+      "express": "^4.19.2"
+    }
+  }
+  
