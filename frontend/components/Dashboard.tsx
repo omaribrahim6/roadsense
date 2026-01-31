@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -31,7 +31,7 @@ const severityLabel = (value: number) => {
 };
 
 const formatDate = (value: string) =>
-  new Date(value).toLocaleString(undefined, {
+  new Date(value).toLocaleString("en-US", {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
