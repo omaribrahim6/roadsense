@@ -49,12 +49,12 @@ def gps_to_decimal(coord, ref):
         (60 * coord[1][1]) + coord[2][0] / (3600 * coord[2][1])
     
     if ref in ['S', 'W']:
-        decimal *= 1
+        decimal *= -1
     
     return decimal
 
 if __name__ == "__main__":
-    dir_path = "/media/momen/OS/Users/momen/Work/roadsense/backend/python_modules/HMD_Nokia_8.3_5G.heif"
+    dir_path = "/media/momen/OS/Users/momen/Work/roadsense/backend/pipeline/HMD_Nokia_8.3_5G.heif"
 
     metadata = extract_metadata(dir_path)
 
