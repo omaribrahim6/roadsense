@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -16,6 +16,7 @@ type MapViewProps = {
 export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapLoadedRef = useRef(false);
 
   const geojson = useMemo(() => {
     return {
@@ -69,6 +70,7 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
 
     map.on("load", () => {
+      mapLoadedRef.current = true;
       map.addSource("detections", {
         type: "geojson",
         data: geojson,
@@ -204,13 +206,14 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
     });
 
     return () => {
+      mapLoadedRef.current = false;
       map.remove();
     };
   }, [data, geojson, route, onSelect]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapLoadedRef.current) return;
     const source = map.getSource("detections") as maplibregl.GeoJSONSource;
     if (source) {
       source.setData(geojson);
@@ -223,7 +226,7 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapLoadedRef.current) return;
     if (map.getLayer("selected-point")) {
       map.setFilter("selected-point", ["==", ["get", "id"], selectedId ?? ""]);
     }
