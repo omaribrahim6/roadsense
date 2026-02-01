@@ -1,4 +1,21 @@
-"""GPS resolution module - simulates GPS coordinates and matches GPX tracks"""
+"""
+GPS resolution module - simulates GPS coordinates and matches GPX tracks
+
+GPX XML track sample format:
+
+    <trk>
+        <name>Name</name>
+        <trkseg>
+            <trkpt lat="XX.XX" lon="XX.XX" />
+                <ele>XX.XX</ele>
+                <time>YYYY-DD-MMTHH:MM:SSZ</time>
+            <trkpt lat="XX.XX" lon="XX.XX" />
+                <ele>XX.XX</ele>
+                <time>YYYY-DD-MMTHH:MM:SSZ</time>
+            ...
+        </trkseg>
+    </trk>
+"""
 
 import sys
 import logging
@@ -6,7 +23,7 @@ from typing import List, Tuple, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
-#add backend directory to path for imports
+# Add backend directory to path for imports
 backend_dir = Path(__file__).parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
@@ -21,7 +38,7 @@ except ImportError:
     )
     logger = logging.getLogger("roadsense.gps")
 
-#optional gpx support
+# Optional GPX support
 try:
     import gpxpy
     import gpxpy.gpx
@@ -30,16 +47,14 @@ except ImportError:
     HAS_GPXPY = False
     logger.warning("gpxpy not installed, GPX matching disabled")
 
-
 @dataclass
 class GPSPoint:
-    """gps coordinate with optional timestamp"""
+    """GPS coordinate with optional timestamp"""
     lat: float
     lng: float
     timestamp: Optional[float] = None
 
-
-#demo routes for testing
+# Demo routes for testing
 DEMO_ROUTE_KUWAIT = [
     (29.3759, 47.9774),  #start: kuwait city center
     (29.3780, 47.9800),
@@ -56,42 +71,41 @@ DEMO_ROUTE_SF = [
     (37.7770, -122.4120),  #end
 ]
 
-
 def interpolate_route(
     timestamp: float,
     route: List[Tuple[float, float]],
     total_duration: float
 ) -> Tuple[float, float]:
-    """interpolate gps position along a route based on timestamp"""
+    """Interpolate GPS position along a route based on timestamp"""
     if not route:
         raise ValueError("Route cannot be empty")
     
     if len(route) == 1:
         return route[0]
     
-    #clamp timestamp to valid range
+    # Clamp timestamp to valid range
     timestamp = max(0.0, min(timestamp, total_duration))
     
-    #calculate progress along route (0.0 to 1.0)
+    # Calculate progress along route (0.0 to 1.0)
     progress = timestamp / total_duration if total_duration > 0 else 0.0
     
-    #calculate which segment we're on
+    # calculate which segment we're on
     num_segments = len(route) - 1
     segment_progress = progress * num_segments
     segment_index = int(segment_progress)
     
-    #handle edge case at end of route
+    # handle edge case at end of route
     if segment_index >= num_segments:
         return route[-1]
     
-    #interpolation factor within segment (0.0 to 1.0)
+    # Interpolation factor within segment (0.0 to 1.0)
     t = segment_progress - segment_index
     
-    #get segment endpoints
+    # Get segment endpoints
     start = route[segment_index]
     end = route[segment_index + 1]
     
-    #linear interpolation
+    # Linear interpolation
     lat = start[0] + (end[0] - start[0]) * t
     lng = start[1] + (end[1] - start[1]) * t
     
@@ -103,7 +117,7 @@ def simulate_gps(
     route: Optional[List[Tuple[float, float]]] = None,
     total_duration: float = 60.0
 ) -> Tuple[float, float]:
-    """simulate gps coordinates based on timestamp and route"""
+    """Simulate gps coordinates based on timestamp and route"""
     if route is None:
         route = DEMO_ROUTE_KUWAIT
     
@@ -115,18 +129,19 @@ def match_gpx(
     gpx_path: str,
     video_start_offset: float = 0.0
 ) -> Tuple[float, float]:
-    """match timestamp to closest gpx track point"""
+    """Match timestamp to closest gpx track point"""
     if not HAS_GPXPY:
         raise ImportError("gpxpy is required for GPX matching")
     
     gpx_file = Path(gpx_path)
+
     if not gpx_file.exists():
         raise FileNotFoundError(f"GPX file not found: {gpx_path}")
     
     with open(gpx_file, "r") as f:
         gpx = gpxpy.parse(f)
     
-    #collect all track points with their timestamps
+    # Collect all track points with their timestamps
     points: List[GPSPoint] = []
     start_time = None
     
@@ -139,7 +154,7 @@ def match_gpx(
                 if start_time is None:
                     start_time = point.time
                 
-                #calculate seconds from start
+                # Calculate seconds from start
                 delta = (point.time - start_time).total_seconds()
                 points.append(GPSPoint(
                     lat=point.latitude,
@@ -150,17 +165,17 @@ def match_gpx(
     if not points:
         raise ValueError("No valid GPS points found in GPX file")
     
-    #adjust timestamp with offset
+    # Adjust timestamp with offset
     adjusted_timestamp = timestamp + video_start_offset
     
-    #find closest point
+    # Find closest point
     closest = min(points, key=lambda p: abs(p.timestamp - adjusted_timestamp))
     
     return (round(closest.lat, 6), round(closest.lng, 6))
 
 
 def parse_gpx_route(gpx_path: str) -> Tuple[List[Tuple[float, float]], float]:
-    """parse gpx file into route and total duration"""
+    """Parse gpx file into route and total duration"""
     if not HAS_GPXPY:
         raise ImportError("gpxpy is required for GPX parsing")
     
@@ -181,11 +196,11 @@ def parse_gpx_route(gpx_path: str) -> Tuple[List[Tuple[float, float]], float]:
                         start_time = point.time
                     end_time = point.time
     
-    #calculate duration
+    # Calculate duration
     if start_time and end_time:
         total_duration = (end_time - start_time).total_seconds()
     else:
-        #estimate based on typical speed
+        # Estimate based on typical speed
         total_duration = len(route) * 1.0
     
     return route, total_duration

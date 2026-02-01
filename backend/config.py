@@ -8,6 +8,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 MODELS_DIR = BASE_DIR / "models" / "weights"
+OUTPUT_DIR = BASE_DIR / "output"
+
+REPO_DIR = Path(BASE_DIR).resolve().parent
+SAMPLE_VID_DIR = REPO_DIR / "sample" / "sample.mp4"
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")

@@ -40,10 +40,8 @@ except ImportError:
     )
     logger = logging.getLogger("roadsense.inference")
 
-
-# HuggingFace model identifier
+# HuggingFace model identifier (https://huggingface.co/cazzz307/Pothole-Finetuned-YoloV8)
 HUGGINGFACE_MODEL_ID = "cazzz307/Pothole-Finetuned-YoloV8"
-
 
 @dataclass
 class RawDetection:
@@ -57,10 +55,8 @@ class RawDetection:
     frame_height: int
     original_class: str  # Original class name from model
 
-
 # Global model instance (lazy loaded)
 _model = None
-
 
 def _download_from_huggingface(repo_id: str, token: Optional[str] = None) -> str:
     """Download YOLO model from HuggingFace Hub
@@ -79,7 +75,7 @@ def _download_from_huggingface(repo_id: str, token: Optional[str] = None) -> str
     
     logger.info(f"Downloading model from HuggingFace: {repo_id}")
     
-    # Find the model file in the repo (usually best.pt or model.pt)
+    # Find the model file in the repo (usually best.pt or model.pt) -> PyTorch ML model architecture stored as tensors
     try:
         files = list_repo_files(repo_id, token=token)
         model_files = [f for f in files if f.endswith('.pt')]
@@ -108,7 +104,6 @@ def _download_from_huggingface(repo_id: str, token: Optional[str] = None) -> str
     
     logger.info(f"Model downloaded to: {model_path}")
     return model_path
-
 
 def _load_model(model_path: Optional[str] = None) -> "YOLO":
     """Load YOLO model from HuggingFace or local path

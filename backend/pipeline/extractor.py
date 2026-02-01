@@ -333,12 +333,27 @@ if __name__ == "__main__":
     # print(f"GPS: {gps}")
     
     # Test video frame extraction
-    video_path = r"C:\Users\momen\Repos\roadsense\backend\pipeline\Neon Dingo Demo.mp4"
-    output_path = r"C:\Users\momen\Repos\roadsense\backend\output"
+
+    try:
+        from config import (
+            OUTPUT_DIR,
+            SAMPLE_VID_DIR,
+        )
+    except ImportError as e:
+        logger.error(f"Failed to start demo: {repr(e)}")
+        raise
     
+    video_path = SAMPLE_VID_DIR
+    output_path = OUTPUT_DIR
+
     frames = extract_frames(video_path, output_path, fps=1)
     print(f"Extracted {len(frames)} frames")
     
     if frames:
         print(f"First frame: {frames[0]}")
+        metadata_1 = extract_metadata(frames[0][0])
+        print(f"Metadata: {metadata_1}")
+        
         print(f"Last frame: {frames[-1]}")
+        metadata_2 = extract_metadata(frames[-1][0])
+        print(f"Metadata: {metadata_2}")
