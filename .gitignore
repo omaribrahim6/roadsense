@@ -93,3 +93,6 @@ output/
 *.swo
 *~
 .tmp/
+
+# Internal documentation
+notes.md

@@ -17,6 +17,10 @@ flowchart TB
         GPX[GPX Track Optional]
     end
     
+    subgraph model [Model Source]
+        HF[HuggingFace Hub]
+    end
+    
     subgraph backend [Python Backend Pipeline]
         Extractor[Frame Extractor]
         Inference[YOLO Inference Engine]
@@ -40,6 +44,7 @@ flowchart TB
     Video --> Extractor
     Frames --> Inference
     Extractor --> Inference
+    HF -.->|pretrained YOLOv8| Inference
     GPX --> GPS
     Inference --> Severity
     Severity --> GPS
@@ -144,7 +149,7 @@ flowchart TB
 ├── tests/
 │   └── test_pipeline.py    # Unit tests
 └── models/
-    └── weights/            # YOLO model weights
+    └── weights/            # (unused) Was for local YOLO weights, now using HuggingFace
 ```
 
 ## Detection Data Contract
@@ -261,9 +266,9 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
 
 # YOLO Model Configuration
-# Option 1: HuggingFace model (default)
+# Using HuggingFace pretrained model (downloads automatically on first run)
 YOLO_MODEL_PATH=cazzz307/Pothole-Finetuned-YoloV8
-# Option 2: Local model file
+# Alternative: Local model file (not currently used)
 # YOLO_MODEL_PATH=./models/weights/best.pt
 
 # Detection Settings
@@ -342,6 +347,7 @@ huggingface_hub>=0.20.0 # Model downloading
 ```
 
 ## Team Responsibilities
+!No AI was used for system design, architecture, and backend!
 
 | Member | Role | Deliverables |
 |--------|------|--------------|
@@ -349,3 +355,8 @@ huggingface_hub>=0.20.0 # Model downloading
 | B | Supabase + Frontend | Data layer, table views, seed scripts |
 | C | Backend/AI Lead | YOLO inference, severity scoring |
 | D | Backend/Systems | Supabase ingestion, GPS handling |
+
+## Where AI was used
+- Majority of frontend design
+- Cleaning up code (adding proper docstrings, comments etc)
+- SQL for database
