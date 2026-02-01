@@ -384,10 +384,14 @@ select {
   padding: 14px;
   position: relative;
   overflow: hidden;
+  min-height: 520px;
 }
 
 .map-shell {
-  flex: 1;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  min-height: 360px;
+  height: auto;
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.08);

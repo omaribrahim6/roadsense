@@ -2,10 +2,8 @@
 
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { Detection } from "@/data/types";
-
-const styleUrl = "https://demotiles.maplibre.org/style.json";
 
 type MapViewProps = {
   data: Detection[];
@@ -17,135 +15,77 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mapLoadedRef = useRef(false);
-  const hasCenteredRef = useRef(false);
-  const [mapReady, setMapReady] = useState(false);
+  const onSelectRef = useRef(onSelect);
 
-  const geojson = useMemo(() => {
-    return {
-      type: "FeatureCollection",
-      features: data.map((item) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [item.lng, item.lat]
-        },
-        properties: {
-          id: item.id,
-          severity: item.severity,
-          damage_type: item.damage_type
-        }
-      }))
-    } as GeoJSON.FeatureCollection;
-  }, [data]);
+  // Keep onSelect ref updated
+  onSelectRef.current = onSelect;
 
-  const route = useMemo(() => {
-    if (data.length < 2) {
-      return {
-        type: "FeatureCollection",
-        features: []
-      } as GeoJSON.FeatureCollection;
-    }
-
-    const sorted = [...data].sort((a, b) =>
-      a.captured_at.localeCompare(b.captured_at)
-    );
-    const coords = sorted.map((item) => [item.lng, item.lat]);
-    return {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: {
-            type: "LineString",
-            coordinates: coords
-          },
-          properties: {}
-        }
-      ]
-    } as GeoJSON.FeatureCollection;
-  }, [data]);
-
+  // Initialize map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const center: [number, number] = data.length
-      ? [data[0].lng, data[0].lat]
-      : [-122.4194, 37.7749];
-
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: styleUrl,
-      center,
-      zoom: 12.5,
-      pitch: 35
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            attribution: "&copy; OpenStreetMap"
+          }
+        },
+        layers: [{ id: "osm", type: "raster", source: "osm" }]
+      },
+      center: [-122.4, 37.8],
+      zoom: 12
     });
 
     mapRef.current = map;
-
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
 
     map.on("load", () => {
       mapLoadedRef.current = true;
-      setMapReady(true);
+
+      // Add detection points source
       map.addSource("detections", {
         type: "geojson",
-        data: geojson,
+        data: { type: "FeatureCollection", features: [] },
         cluster: true,
         clusterMaxZoom: 13,
         clusterRadius: 45
       });
 
-      map.addSource("route", {
-        type: "geojson",
-        data: route
-      });
-
-      map.addLayer({
-        id: "route-line",
-        type: "line",
-        source: "route",
-        paint: {
-          "line-color": "#0ea5e9",
-          "line-width": 3,
-          "line-opacity": 0.6
-        }
-      });
-
+      // Clusters
       map.addLayer({
         id: "clusters",
         type: "circle",
         source: "detections",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": [
-            "step",
-            ["get", "point_count"],
-            "#14b8a6",
-            4,
-            "#38bdf8",
-            8,
-            "#fb923c"
-          ],
+          "circle-color": ["step", ["get", "point_count"], "#14b8a6", 4, "#38bdf8", 8, "#fb923c"],
           "circle-radius": ["step", ["get", "point_count"], 16, 6, 22, 12, 28],
           "circle-opacity": 0.85
         }
       });
 
-      map.addLayer({
-        id: "cluster-count",
-        type: "symbol",
-        source: "detections",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-font": ["Open Sans Bold"],
-          "text-size": 12
-        },
-        paint: {
-          "text-color": "#0b1220"
-        }
-      });
+      // Cluster count labels (only when glyphs are available)
+      if (map.getStyle()?.glyphs) {
+        map.addLayer({
+          id: "cluster-count",
+          type: "symbol",
+          source: "detections",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": "{point_count_abbreviated}",
+            "text-size": 12
+          },
+          paint: { "text-color": "#0b1220" }
+        });
+      }
 
+      // Individual points
       map.addLayer({
         id: "unclustered",
         type: "circle",
@@ -153,17 +93,8 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
-            "interpolate",
-            ["linear"],
-            ["get", "severity"],
-            0,
-            "#22c55e",
-            0.45,
-            "#38bdf8",
-            0.7,
-            "#fb923c",
-            1,
-            "#ef4444"
+            "interpolate", ["linear"], ["get", "severity"],
+            0, "#22c55e", 0.45, "#38bdf8", 0.7, "#fb923c", 1, "#ef4444"
           ],
           "circle-radius": 8,
           "circle-stroke-color": "#0b1220",
@@ -171,94 +102,60 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
         }
       });
 
-      map.addLayer({
-        id: "selected-point",
-        type: "circle",
-        source: "detections",
-        filter: ["==", ["get", "id"], ""],
-        paint: {
-          "circle-color": "#111827",
-          "circle-radius": 14,
-          "circle-opacity": 0.2
-        }
-      });
-
-      map.on("click", "clusters", (event) => {
-        const features = map.queryRenderedFeatures(event.point, {
-          layers: ["clusters"]
-        });
+      // Click handlers
+      map.on("click", "clusters", (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
         const clusterId = features[0]?.properties?.cluster_id;
-        if (clusterId === undefined || clusterId === null) return;
+        if (clusterId == null) return;
         const source = map.getSource("detections") as maplibregl.GeoJSONSource;
-        source
-          .getClusterExpansionZoom(clusterId)
-          .then((zoom) => {
-            if (zoom === null || zoom === undefined) return;
-            map.easeTo({
-              center: (features[0].geometry as any).coordinates,
-              zoom
-            });
-          })
-          .catch(() => undefined);
-      });
-
-      map.on("click", "unclustered", (event) => {
-        const features = map.queryRenderedFeatures(event.point, {
-          layers: ["unclustered"]
+        source.getClusterExpansionZoom(clusterId).then((zoom) => {
+          map.easeTo({ center: (features[0].geometry as any).coordinates, zoom: zoom ?? 14 });
         });
-        const id = features[0]?.properties?.id;
-        if (id && onSelect) {
-          onSelect(String(id));
-        }
       });
 
-      map.on("mouseenter", "unclustered", () => {
-        map.getCanvas().style.cursor = "pointer";
+      map.on("click", "unclustered", (e) => {
+        const id = e.features?.[0]?.properties?.id;
+        if (id && onSelectRef.current) onSelectRef.current(String(id));
       });
 
-      map.on("mouseleave", "unclustered", () => {
-        map.getCanvas().style.cursor = "";
-      });
+      map.on("mouseenter", "unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "unclustered", () => { map.getCanvas().style.cursor = ""; });
     });
 
     return () => {
       mapLoadedRef.current = false;
       map.remove();
+      mapRef.current = null;
     };
-  }, [data, geojson, route, onSelect]);
+  }, []);
 
+  // Update data when it changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoadedRef.current) return;
+
+    const geojson: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: data.map((item) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [item.lng, item.lat] },
+        properties: { id: item.id, severity: item.severity, damage_type: item.damage_type }
+      }))
+    };
+
     const source = map.getSource("detections") as maplibregl.GeoJSONSource;
-    if (source) {
-      source.setData(geojson);
-    }
-    const routeSource = map.getSource("route") as maplibregl.GeoJSONSource;
-    if (routeSource) {
-      routeSource.setData(route);
-    }
-  }, [geojson, route]);
+    if (source) source.setData(geojson);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapLoadedRef.current) return;
-    if (map.getLayer("selected-point")) {
-      map.setFilter("selected-point", ["==", ["get", "id"], selectedId ?? ""]);
+    // Center on first point if we have data
+    if (data.length > 0) {
+      map.easeTo({ center: [data[0].lng, data[0].lat], zoom: 13 });
     }
-  }, [selectedId]);
+  }, [data]);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-    if (data.length && !hasCenteredRef.current) {
-      map.easeTo({
-        center: [data[0].lng, data[0].lat],
-        zoom: 12.5
-      });
-      hasCenteredRef.current = true;
-    }
-  }, [data, mapReady]);
-
-  return <div ref={containerRef} className="map-shell" />;
+  return (
+    <div
+      ref={containerRef}
+      className="map-shell"
+    />
+  );
 }

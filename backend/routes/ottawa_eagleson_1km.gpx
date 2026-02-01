@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="RoadSense">
+  <trk>
+    <name>Eagleson Rd Ottawa</name>
+    <trkseg>
+      <trkpt lat="45.2696111" lon="-75.8578056"></trkpt>
+      <trkpt lat="45.2685889" lon="-75.8572389"></trkpt>
+      <trkpt lat="45.2675667" lon="-75.8566722"></trkpt>
+      <trkpt lat="45.2665444" lon="-75.8561056"></trkpt>
+      <trkpt lat="45.2655222" lon="-75.8555389"></trkpt>
+      <trkpt lat="45.2645000" lon="-75.8549722"></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

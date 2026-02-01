@@ -4,8 +4,11 @@ import os
 import sys
 import logging
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 # Add backend directory to path for imports
 backend_dir = Path(__file__).parent.parent
@@ -163,6 +166,124 @@ def _load_model(model_path: Optional[str] = None) -> "YOLO":
     return _model
 
 
+# Color mapping for different damage types (BGR format for OpenCV)
+DAMAGE_COLORS = {
+    "pothole": (0, 0, 255),      # Red
+    "crack": (0, 165, 255),      # Orange
+    "rut": (0, 255, 255),        # Yellow
+    "debris": (255, 0, 255),     # Magenta
+}
+
+DEFAULT_BOX_COLOR = (0, 255, 0)  # Green for unknown types
+
+
+def draw_bounding_boxes(
+    image: np.ndarray,
+    detections: List[Dict],
+    thickness: int = 2,
+    font_scale: float = 0.6,
+    show_confidence: bool = True,
+) -> np.ndarray:
+    """Draw bounding boxes on an image
+    
+    Args:
+        image: Input image (BGR format)
+        detections: List of detection dicts with 'bbox', 'class'/'damage_type', 'confidence'
+        thickness: Line thickness for boxes
+        font_scale: Font scale for labels
+        show_confidence: Whether to show confidence percentage
+    
+    Returns:
+        Image with bounding boxes drawn
+    """
+    annotated = image.copy()
+    
+    for det in detections:
+        bbox = det.get("bbox", {})
+        x1 = int(bbox.get("x1", 0))
+        y1 = int(bbox.get("y1", 0))
+        x2 = int(bbox.get("x2", 0))
+        y2 = int(bbox.get("y2", 0))
+        
+        # Get damage type and color
+        damage_type = det.get("damage_type") or det.get("class", "pothole")
+        color = DAMAGE_COLORS.get(damage_type, DEFAULT_BOX_COLOR)
+        
+        # Draw rectangle
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, thickness)
+        
+        # Build label
+        confidence = det.get("confidence", 0)
+        if show_confidence:
+            label = f"{damage_type}: {confidence:.0%}"
+        else:
+            label = damage_type
+        
+        # Draw label background
+        (label_w, label_h), baseline = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness
+        )
+        label_y1 = max(y1 - label_h - 10, 0)
+        label_y2 = y1
+        cv2.rectangle(annotated, (x1, label_y1), (x1 + label_w + 4, label_y2), color, -1)
+        
+        # Draw label text
+        cv2.putText(
+            annotated,
+            label,
+            (x1 + 2, label_y2 - 4),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            font_scale,
+            (255, 255, 255),  # White text
+            thickness - 1 if thickness > 1 else 1,
+            cv2.LINE_AA,
+        )
+    
+    return annotated
+
+
+def save_annotated_image(
+    image_path: str,
+    detections: List[Dict],
+    output_path: Optional[str] = None,
+    output_dir: Optional[str] = None,
+) -> str:
+    """Save an image with bounding boxes drawn
+    
+    Args:
+        image_path: Path to original image
+        detections: List of detection dicts
+        output_path: Explicit output path (overrides output_dir)
+        output_dir: Directory to save output (uses original filename with _annotated suffix)
+    
+    Returns:
+        Path to saved annotated image
+    """
+    # Read image
+    image = cv2.imread(image_path)
+    if image is None:
+        raise ValueError(f"Could not read image: {image_path}")
+    
+    # Draw boxes
+    annotated = draw_bounding_boxes(image, detections)
+    
+    # Determine output path
+    if output_path is None:
+        input_path = Path(image_path)
+        if output_dir:
+            out_dir = Path(output_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            output_path = str(out_dir / f"{input_path.stem}_annotated{input_path.suffix}")
+        else:
+            output_path = str(input_path.parent / f"{input_path.stem}_annotated{input_path.suffix}")
+    
+    # Save
+    cv2.imwrite(output_path, annotated)
+    logger.info(f"Saved annotated image: {output_path}")
+    
+    return output_path
+
+
 def _normalize_class(class_name: str) -> str:
     """Normalize class name to standard damage type"""
     # Check direct mapping
@@ -305,16 +426,22 @@ def detect_single_image(
     image_path: str,
     conf_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
     model_path: Optional[str] = None,
-) -> List[Dict]:
+    save_annotated: bool = False,
+    output_path: Optional[str] = None,
+    output_dir: Optional[str] = None,
+) -> Tuple[List[Dict], Optional[str]]:
     """Convenience function to detect potholes in a single image
     
     Args:
         image_path: Path to image file
         conf_threshold: Minimum confidence threshold
         model_path: Optional path to model
+        save_annotated: Whether to save an annotated image with bounding boxes
+        output_path: Explicit path for annotated output
+        output_dir: Directory for annotated output (uses original filename)
     
     Returns:
-        List of detection dicts with keys: class, confidence, bbox, area
+        Tuple of (list of detection dicts, path to annotated image or None)
     """
     detections = run_inference(
         frame_paths=[image_path],
@@ -330,6 +457,7 @@ def detect_single_image(
         
         results.append({
             "class": det.damage_type,
+            "damage_type": det.damage_type,
             "original_class": det.original_class,
             "confidence": det.confidence,
             "bbox": bbox,
@@ -338,7 +466,17 @@ def detect_single_image(
             "frame_height": det.frame_height,
         })
     
-    return results
+    # Save annotated image if requested
+    annotated_path = None
+    if save_annotated and results:
+        annotated_path = save_annotated_image(
+            image_path,
+            results,
+            output_path=output_path,
+            output_dir=output_dir,
+        )
+    
+    return results, annotated_path
 
 
 if __name__ == "__main__":
@@ -348,11 +486,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test pothole detection")
     parser.add_argument("image", help="Path to image file")
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")
+    parser.add_argument("--save", "-s", action="store_true", help="Save annotated image with bounding boxes")
+    parser.add_argument("--output", "-o", help="Output path for annotated image")
+    parser.add_argument("--output-dir", "-d", help="Output directory for annotated image")
     args = parser.parse_args()
     
     print(f"Testing inference on: {args.image}")
     
-    results = detect_single_image(args.image, conf_threshold=args.conf)
+    results, annotated_path = detect_single_image(
+        args.image,
+        conf_threshold=args.conf,
+        save_annotated=args.save or args.output is not None or args.output_dir is not None,
+        output_path=args.output,
+        output_dir=args.output_dir,
+    )
     
     if results:
         print(f"\nFound {len(results)} pothole(s):")
@@ -360,5 +507,8 @@ if __name__ == "__main__":
             print(f"  {i}. {det['class']} (conf: {det['confidence']:.2%})")
             print(f"     Bbox: {det['bbox']}")
             print(f"     Area: {det['area']} pixels")
+        
+        if annotated_path:
+            print(f"\nAnnotated image saved to: {annotated_path}")
     else:
         print("\nNo potholes detected.")
