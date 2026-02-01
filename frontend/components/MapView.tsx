@@ -2,7 +2,7 @@
 
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Detection } from "@/data/types";
 
 const styleUrl = "https://demotiles.maplibre.org/style.json";
@@ -17,6 +17,8 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mapLoadedRef = useRef(false);
+  const hasCenteredRef = useRef(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const geojson = useMemo(() => {
     return {
@@ -37,17 +39,30 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   }, [data]);
 
   const route = useMemo(() => {
+    if (data.length < 2) {
+      return {
+        type: "FeatureCollection",
+        features: []
+      } as GeoJSON.FeatureCollection;
+    }
+
     const sorted = [...data].sort((a, b) =>
       a.captured_at.localeCompare(b.captured_at)
     );
     const coords = sorted.map((item) => [item.lng, item.lat]);
     return {
-      type: "Feature",
-      geometry: {
-        type: "LineString",
-        coordinates: coords
-      }
-    } as GeoJSON.Feature;
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: coords
+          },
+          properties: {}
+        }
+      ]
+    } as GeoJSON.FeatureCollection;
   }, [data]);
 
   useEffect(() => {
@@ -71,6 +86,7 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
 
     map.on("load", () => {
       mapLoadedRef.current = true;
+      setMapReady(true);
       map.addSource("detections", {
         type: "geojson",
         data: geojson,
@@ -231,6 +247,18 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
       map.setFilter("selected-point", ["==", ["get", "id"], selectedId ?? ""]);
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (data.length && !hasCenteredRef.current) {
+      map.easeTo({
+        center: [data[0].lng, data[0].lat],
+        zoom: 12.5
+      });
+      hasCenteredRef.current = true;
+    }
+  }, [data, mapReady]);
 
   return <div ref={containerRef} className="map-shell" />;
 }

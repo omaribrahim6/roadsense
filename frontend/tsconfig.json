@@ -29,6 +29,9 @@
       ],
       "@/data/*": [
         "data/*"
+      ],
+      "@/services/*": [
+        "services/*"
       ]
     }
   },

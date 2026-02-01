@@ -2,9 +2,9 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { mockDetections } from "@/data/mockDetections";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Detection } from "@/data/types";
+import { fetchDetections } from "@/services/detections";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
@@ -45,31 +45,96 @@ export default function Dashboard() {
   const [confidenceFilter, setConfidenceFilter] = useState(0.6);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [selectedId, setSelectedId] = useState<string>(mockDetections[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [detections, setDetections] = useState<Detection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [lastUpdated, setLastUpdated] = useState("");
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const loadDetections = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await fetchDetections();
+      if (!isMountedRef.current) return;
+      setDetections(data);
+      setLastUpdated(new Date().toISOString());
+    } catch (err) {
+      if (!isMountedRef.current) return;
+      setError(err instanceof Error ? err.message : "Failed to load detections");
+    } finally {
+      if (!isMountedRef.current) return;
+      setLoading(false);
+    }
+  }, [fetchDetections]);
+
+  useEffect(() => {
+    void loadDetections();
+  }, [loadDetections]);
+
+  const handleRefresh = () => {
+    void loadDetections();
+  };
 
   const filtered = useMemo(() => {
-    return mockDetections.filter((item) => {
-      if (typeFilter !== "all" && item.damage_type !== typeFilter) return false;
-      if (item.severity < severityFilter) return false;
-      if (item.confidence < confidenceFilter) return false;
-      if (startDate) {
-        const start = new Date(startDate).getTime();
-        if (new Date(item.captured_at).getTime() < start) return false;
-      }
-      if (endDate) {
-        const end = new Date(endDate).getTime();
-        if (new Date(item.captured_at).getTime() > end) return false;
-      }
-      return true;
-    });
-  }, [typeFilter, severityFilter, confidenceFilter, startDate, endDate]);
+    const query = searchQuery.trim().toLowerCase();
+
+    return [...detections]
+      .filter((item) => {
+        if (typeFilter !== "all" && item.damage_type !== typeFilter) return false;
+        if (item.severity < severityFilter) return false;
+        if (item.confidence < confidenceFilter) return false;
+        if (startDate) {
+          const start = new Date(startDate).getTime();
+          if (new Date(item.captured_at).getTime() < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate).getTime();
+          if (new Date(item.captured_at).getTime() > end) return false;
+        }
+        if (query) {
+          const haystack = `${item.id} ${item.source_id} ${item.damage_type}`.toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime()
+      );
+  }, [
+    detections,
+    typeFilter,
+    severityFilter,
+    confidenceFilter,
+    startDate,
+    endDate,
+    searchQuery
+  ]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      if (selectedId) setSelectedId("");
+      return;
+    }
+
+    if (!selectedId || !filtered.some((item) => item.id === selectedId)) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selectedId]);
 
   const selected = useMemo(() => {
-    return (
-      filtered.find((item) => item.id === selectedId) ??
-      filtered[0] ??
-      mockDetections[0]
-    );
+    if (!filtered.length) return null;
+    return filtered.find((item) => item.id === selectedId) ?? filtered[0];
   }, [selectedId, filtered]);
 
   const summary = useMemo(() => {
@@ -117,6 +182,18 @@ export default function Dashboard() {
     window.URL.revokeObjectURL(url);
   };
 
+  const lastUpdatedLabel = lastUpdated
+    ? `Updated ${formatDate(lastUpdated)}`
+    : loading
+    ? "Syncing..."
+    : "Not synced";
+
+  const statusText = loading
+    ? "Loading detections..."
+    : error
+    ? "Connection error"
+    : `${detections.length} detections loaded`;
+
   return (
     <div className="app-shell">
       <aside className="rail">
@@ -157,11 +234,15 @@ export default function Dashboard() {
                 <path d="M16.5 16.5L21 21" stroke="#64748b" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </span>
-            <input placeholder="Search by street, source, or ID" />
+            <input
+              placeholder="Search by street, source, or ID"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
           </div>
 
           <div className="top-actions">
-            <div className="pill">Jan 31, 2026</div>
+            <div className="pill">{lastUpdatedLabel}</div>
             <div className="toggle-group">
               <button
                 className={view === "map" ? "active" : ""}
@@ -197,7 +278,7 @@ export default function Dashboard() {
               </select>
             </div>
             <div className="filter-group">
-              <label>Severity ≥ {severityFilter.toFixed(2)}</label>
+              <label>Severity &ge; {severityFilter.toFixed(2)}</label>
               <input
                 className="range"
                 type="range"
@@ -209,7 +290,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="filter-group">
-              <label>Confidence ≥ {confidenceFilter.toFixed(2)}</label>
+              <label>Confidence &ge; {confidenceFilter.toFixed(2)}</label>
               <input
                 className="range"
                 type="range"
@@ -242,6 +323,24 @@ export default function Dashboard() {
               <span>Avg confidence: {summary.avgConfidence.toFixed(2)}</span>
             </div>
 
+            <div className="data-status">
+              <span
+                className={`status-chip ${
+                  loading ? "loading" : error ? "error" : "success"
+                }`}
+              >
+                {statusText}
+              </span>
+              <button
+                className="cta secondary small"
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                Refresh
+              </button>
+            </div>
+            {error && <span className="status-detail">{error}</span>}
+
             <h3>Latest detections</h3>
             <div className="list">
               {filtered.map((item) => {
@@ -263,10 +362,16 @@ export default function Dashboard() {
                   </div>
                 );
               })}
-              {!filtered.length && <span>No detections match the filters.</span>}
+              {loading && <span className="list-empty">Loading detections...</span>}
+              {!loading && error && (
+                <span className="list-empty">Unable to load detections.</span>
+              )}
+              {!loading && !error && !filtered.length && (
+                <span>No detections match the filters.</span>
+              )}
             </div>
 
-            <button className="cta secondary" onClick={exportCsv}>
+            <button className="cta secondary" onClick={exportCsv} disabled={!filtered.length}>
               Export CSV
             </button>
           </div>
@@ -279,10 +384,19 @@ export default function Dashboard() {
                   <strong>{filtered.length}</strong>
                 </div>
                 <MapView
-                  data={filtered.length ? filtered : mockDetections}
+                  data={filtered}
                   selectedId={selected?.id}
                   onSelect={(id) => setSelectedId(id)}
                 />
+                {(loading || error || (!loading && !error && !filtered.length)) && (
+                  <div className={`map-status ${error ? "error" : ""}`}>
+                    {loading
+                      ? "Loading detections..."
+                      : error
+                      ? "Unable to load detections."
+                      : "No detections to show."}
+                  </div>
+                )}
                 <div className="legend">
                   <span>
                     <i style={{ background: "#22c55e" }} /> Low
@@ -319,6 +433,13 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
+                {loading && <span className="list-empty">Loading detections...</span>}
+                {!loading && error && (
+                  <span className="list-empty">Unable to load detections.</span>
+                )}
+                {!loading && !error && !filtered.length && (
+                  <span>No detections match the filters.</span>
+                )}
               </div>
             )}
           </div>
@@ -380,7 +501,13 @@ export default function Dashboard() {
                 </div>
               </>
             ) : (
-              <span>Select a detection to review.</span>
+              <span>
+                {loading
+                  ? "Loading detections..."
+                  : error
+                  ? "Unable to load detections."
+                  : "Select a detection to review."}
+              </span>
             )}
           </div>
         </section>
