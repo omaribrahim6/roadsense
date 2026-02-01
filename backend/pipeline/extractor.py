@@ -38,7 +38,7 @@ register_heif_opener()
 # Supported image formats
 IMAGE_FORMATS = ('.jpg', '.jpeg', '.gif', '.png', '.bmp', '.tiff', '.raw', '.cr2', '.heic', '.heif', '.webp')
 
-
+#metadata extraction - includes logging, opening images, and parsing exif for gps
 def extract_metadata(file_path: str) -> Dict:
     """
     Extract metadata including GPS coordinates from an image file.
