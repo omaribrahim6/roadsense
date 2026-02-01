@@ -11,11 +11,76 @@ type MapViewProps = {
   onSelect?: (id: string) => void;
 };
 
+function pointNearLine(
+  point: [number, number],
+  line: [number, number][],
+  toleranceMeters = 30
+) {
+  const R = 6371000;
+
+  const toRad = (d: number) => (d * Math.PI) / 180;
+
+  function toXY([lng, lat]: [number, number]) {
+    return {
+      x: R * toRad(lng) * Math.cos(toRad(lat)),
+      y: R * toRad(lat)
+    };
+  }
+
+  const p = toXY(point);
+
+  for (let i = 0; i < line.length - 1; i++) {
+    const a = toXY(line[i]);
+    const b = toXY(line[i + 1]);
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+
+    const t =
+      ((p.x - a.x) * dx + (p.y - a.y) * dy) /
+      (dx * dx + dy * dy);
+
+    const clamped = Math.max(0, Math.min(1, t));
+
+    const closest = {
+      x: a.x + clamped * dx,
+      y: a.y + clamped * dy
+    };
+
+    const dist = Math.hypot(p.x - closest.x, p.y - closest.y);
+
+    if (dist <= toleranceMeters) return true;
+  }
+
+  return false;
+}
+
+function updateRoadPinStates(map: maplibregl.Map, detections: Detection[]) {
+  const roadFeatures = map.querySourceFeatures("roads");
+
+  for (const feature of roadFeatures) {
+    if (!feature.id || feature.geometry.type !== "LineString") continue;
+
+    const roadCoords = feature.geometry.coordinates as [number, number][];
+
+    const hasPins = detections.some((d) =>
+      pointNearLine([d.lng, d.lat], roadCoords, 50)
+    );
+
+    map.setFeatureState(
+      { source: "roads", id: feature.id },
+      { hasPins }
+    );
+  }
+}
+
+
 export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const mapLoadedRef = useRef(false);
   const onSelectRef = useRef(onSelect);
+  const allDetectionsRef = useRef<Detection[]>([]);
 
   // Keep onSelect ref updated
   onSelectRef.current = onSelect;
@@ -48,13 +113,41 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
     map.on("load", () => {
       mapLoadedRef.current = true;
 
+      //Add roads source
+      map.addSource("roads", {
+        type: "geojson",
+        data: "/data/roads.geojson",
+        promoteId: "@id"
+      });
+
       // Add detection points source
       map.addSource("detections", {
         type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-        cluster: true,
-        clusterMaxZoom: 13,
-        clusterRadius: 45
+        data: { type: "FeatureCollection", features: [] }
+      });
+
+      //Roads
+      map.addLayer({
+        id: "roads-layer",
+        type: "line",
+        source: "roads",
+        paint: {
+          "line-color": [
+            "case",
+            // Selected road (highest priority)
+            ["boolean", ["feature-state", "selected"], false],
+            "#c48a0e",
+
+            // Unselected + has pins
+            ["boolean", ["feature-state", "hasPins"], false],
+            "#ef4444",
+
+            // Unselected + no pins
+            "#22c55e"
+          ],
+          "line-width": 4,
+          "line-opacity": 0.9
+        }
       });
 
       // Clusters
@@ -103,6 +196,59 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
       });
 
       // Click handlers
+      let selectedRoadId: string | number | null = null;
+
+      map.on("click", "roads-layer", (e) => {
+        const feature = e.features?.[0];
+        if (!feature || feature.id == null) return;
+
+        // Clear previous selection
+        if (selectedRoadId !== null) {
+          map.setFeatureState(
+            { source: "roads", id: selectedRoadId },
+            { selected: false }
+          );
+        }
+
+        // Set new selection
+        selectedRoadId = feature.id;
+
+        map.setFeatureState(
+          { source: "roads", id: selectedRoadId },
+          { selected: true }
+        );
+        
+        const geometry = feature.geometry;
+        if (geometry.type !== "LineString") return;
+
+        const roadCoords = geometry.coordinates as [number, number][];
+
+        const filtered = allDetectionsRef.current.filter((d) =>
+          pointNearLine([d.lng, d.lat], roadCoords, 50)
+        );
+
+        const geojson: GeoJSON.FeatureCollection = {
+          type: "FeatureCollection",
+          features: filtered.map((item) => ({
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [item.lng, item.lat]
+            },
+            properties: {
+              id: item.id,
+              severity: item.severity,
+              damage_type: item.damage_type
+            }
+          }))
+        };
+
+        const source = map.getSource("detections") as maplibregl.GeoJSONSource;
+        source.setData(geojson);
+
+        console.log("Selected road:", feature.properties);
+      });
+
       map.on("click", "clusters", (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
         const clusterId = features[0]?.properties?.cluster_id;
@@ -118,6 +264,8 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
         if (id && onSelectRef.current) onSelectRef.current(String(id));
       });
 
+      map.on("mouseenter", "roads-layer", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "roads-layer", () => { map.getCanvas().style.cursor = ""; });
       map.on("mouseenter", "unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "unclustered", () => { map.getCanvas().style.cursor = ""; });
     });
@@ -134,23 +282,46 @@ export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
     const map = mapRef.current;
     if (!map || !mapLoadedRef.current) return;
 
-    const geojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: data.map((item) => ({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [item.lng, item.lat] },
-        properties: { id: item.id, severity: item.severity, damage_type: item.damage_type }
-      }))
-    };
+    allDetectionsRef.current = data;
 
+    // Wait until the map has finished rendering sources
+    map.once("idle", () => {
+      const roadFeatures = map.querySourceFeatures("roads");
+
+      for (const feature of roadFeatures) {
+        if (!feature.id || feature.geometry.type !== "LineString") continue;
+
+        const roadCoords = feature.geometry.coordinates as [number, number][];
+
+        const hasPins = data.some((d) =>
+          pointNearLine([d.lng, d.lat], roadCoords, 50)
+        );
+
+        map.setFeatureState(
+          { source: "roads", id: feature.id },
+          { hasPins }
+        );
+      }
+    });
+
+    // Hide detections by default
     const source = map.getSource("detections") as maplibregl.GeoJSONSource;
-    if (source) source.setData(geojson);
+    if (source) {
+      source.setData({
+        type: "FeatureCollection",
+        features: []
+      });
+    }
 
-    // Center on first point if we have data
+    // Optional camera movement
     if (data.length > 0) {
-      map.easeTo({ center: [data[0].lng, data[0].lat], zoom: 13 });
+      map.easeTo({
+        center: [data[0].lng, data[0].lat],
+        zoom: 13
+      });
     }
   }, [data]);
+
 
   return (
     <div
