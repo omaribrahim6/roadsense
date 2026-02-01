@@ -1,14 +1,33 @@
 """Deduplication module - deduplicates detections based on spatial and temporal criteria"""
 
+import sys
+import logging
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 from collections import defaultdict
+from pathlib import Path
 
-from ..config import DEDUP_RADIUS_METERS
-from .gps import calculate_distance_meters
-from ..utils.logger import get_logger
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
-logger = get_logger("roadsense.dedup")
+try:
+    from config import DEDUP_RADIUS_METERS
+except ImportError:
+    DEDUP_RADIUS_METERS = 10.0  # Default fallback
+
+from .extractor import calculate_distance_meters
+
+try:
+    from utils.logger import get_logger
+    logger = get_logger("roadsense.dedup")
+except ImportError:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(levelname)s - %(name)s - %(message)s"
+    )
+    logger = logging.getLogger("roadsense.dedup")
 
 @dataclass
 class EnrichedDetection:
