@@ -1,0 +1,22 @@
+services:
+  astrali_frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: astrali_frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - ./frontend/.env
+    environment:
+      - VIRTUAL_HOST=astrali.tech,www.astrali.tech
+      - LETSENCRYPT_HOST=astrali.tech,www.astrali.tech
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_EMAIL=omarmgmi08@gmail.com
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    external: true
