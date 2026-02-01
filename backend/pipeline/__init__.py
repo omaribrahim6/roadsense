@@ -13,7 +13,7 @@ from .extractor import (
 )
 
 #inference - yolo detection
-from .inference import run_inference, RawDetection, InferenceEngine
+from .inference import run_inference, RawDetection, detect_single_image
 
 #severity - damage severity scoring
 from .severity import (
@@ -54,7 +54,7 @@ __all__ = [
     #inference
     "run_inference",
     "RawDetection",
-    "InferenceEngine",
+    "detect_single_image",
     #severity
     "calculate_severity",
     "calculate_severity_batch",

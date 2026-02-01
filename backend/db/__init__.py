@@ -1,14 +1,22 @@
 """Supabase module - database and storage operations"""
 
-from .client import get_supabase_client, test_connection, reset_client
-from .storage import (
+import sys
+from pathlib import Path
+
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from db.client import get_supabase_client, test_connection, reset_client
+from db.storage import (
     upload_image,
     upload_batch,
     get_public_url,
     delete_image,
     ensure_bucket_exists,
 )
-from .database import (
+from db.database import (
     insert_detection,
     insert_batch_detections,
     get_detections_by_source,

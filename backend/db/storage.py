@@ -1,12 +1,18 @@
 """Supabase storage module - manages image uploads and public URLs"""
 
+import sys
 import mimetypes
 from pathlib import Path
 from typing import Optional
 
-from ..config import STORAGE_BUCKET, SUPABASE_URL
-from .client import get_supabase_client
-from ..utils.logger import get_logger
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from config import STORAGE_BUCKET, SUPABASE_URL
+from db.client import get_supabase_client
+from utils.logger import get_logger
 
 logger = get_logger("roadsense.storage")
 
@@ -27,8 +33,8 @@ def upload_image(
     filename = local_file.name
     storage_path = f"{source_id}/{filename}"
 
-    #get content type
-    content_type = mimetypes.guess_type(local_path)
+    #get content type (guess_type returns tuple: (type, encoding))
+    content_type, _ = mimetypes.guess_type(local_path)
     content_type = content_type or "image/jpeg"
 
     #read file

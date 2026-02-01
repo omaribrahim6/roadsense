@@ -234,7 +234,7 @@ def _output_results(detections: List[EnrichedDetection], output_path: Optional[s
 
 def _upload_to_supabase(detections: List[EnrichedDetection], source_id: str):
     """upload detections to supabase"""
-    from supabase import (
+    from db import (
         get_supabase_client,
         upload_batch,
         insert_batch_detections,
@@ -290,7 +290,7 @@ def _print_summary(detections: List[EnrichedDetection]):
 @cli.command()
 def test_connection():
     """test supabase connection"""
-    from supabase.client import test_connection as test_sb
+    from db.client import test_connection as test_sb
     
     logger.info("Testing Supabase connection...")
     
@@ -306,7 +306,7 @@ def test_connection():
 @click.option("--source-id", "-s", required=True, help="source id to query")
 def stats(source_id: str):
     """get detection statistics for a source"""
-    from supabase.database import get_detection_stats
+    from db.database import get_detection_stats
     
     stats = get_detection_stats(source_id)
     

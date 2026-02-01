@@ -1,12 +1,19 @@
 """Supabase database module - manages detection data insertion"""
 
+import sys
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 import json
+from pathlib import Path
 
-from .client import get_supabase_client
-from ..pipeline.dedup import EnrichedDetection
-from ..utils.logger import get_logger
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from db.client import get_supabase_client
+from pipeline.dedup import EnrichedDetection
+from utils.logger import get_logger
 
 logger = get_logger("roadsense.database")
 

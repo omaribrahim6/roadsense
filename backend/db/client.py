@@ -1,9 +1,17 @@
 """Supabase client module - manages Supabase connections and API interactions"""
 
+import sys
+from pathlib import Path
 from typing import Optional
+
+# Add backend directory to path for imports
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from supabase import create_client, Client
-from ..config import SUPABASE_URL, SUPABASE_SERVICE_KEY
-from ..utils.logger import get_logger
+from config import SUPABASE_URL, SUPABASE_SERVICE_KEY
+from utils.logger import get_logger
 
 logger = get_logger("roadsense.supabase")
 
