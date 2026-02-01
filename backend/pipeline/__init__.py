@@ -1,15 +1,6 @@
-"""
-RoadSense Pipeline Module
+"""RoadSense pipeline module - core processing components"""
 
-This module contains the core processing pipeline components:
-- extractor: Video frame extraction and GPS from EXIF
-- inference: YOLO model inference
-- severity: Severity score calculation
-- gps: GPS simulation and GPX matching
-- dedup: Detection deduplication
-"""
-
-# Frame extraction and EXIF GPS (from extractor.py)
+#extractor - frame extraction and exif gps
 from .extractor import (
     extract_frames,
     extract_metadata,
@@ -21,14 +12,37 @@ from .extractor import (
     IMAGE_FORMATS,
 )
 
-# These imports will work once the files are created:
-# from .inference import run_inference, RawDetection
-# from .severity import calculate_severity
-# from .gps import simulate_gps, match_gpx, interpolate_route
-# from .dedup import deduplicate
+#inference - yolo detection
+from .inference import run_inference, RawDetection, InferenceEngine
+
+#severity - damage severity scoring
+from .severity import (
+    calculate_severity,
+    calculate_severity_batch,
+    get_severity_label,
+    get_severity_color,
+)
+
+#gps - gps simulation and gpx matching
+from .gps import (
+    simulate_gps,
+    match_gpx,
+    interpolate_route,
+    parse_gpx_route,
+    DEMO_ROUTE_KUWAIT,
+    DEMO_ROUTE_SF,
+)
+
+#dedup - detection deduplication
+from .dedup import (
+    deduplicate,
+    EnrichedDetection,
+    filter_by_confidence,
+    filter_by_severity,
+)
 
 __all__ = [
-    # Extractor
+    #extractor
     "extract_frames",
     "extract_metadata",
     "extract_gps_from_image",
@@ -37,12 +51,25 @@ __all__ = [
     "get_frame_dimensions",
     "list_image_files",
     "IMAGE_FORMATS",
-    # Uncomment as files are created:
-    # "run_inference",
-    # "RawDetection",
-    # "calculate_severity",
-    # "simulate_gps",
-    # "match_gpx",
-    # "interpolate_route",
-    # "deduplicate",
+    #inference
+    "run_inference",
+    "RawDetection",
+    "InferenceEngine",
+    #severity
+    "calculate_severity",
+    "calculate_severity_batch",
+    "get_severity_label",
+    "get_severity_color",
+    #gps
+    "simulate_gps",
+    "match_gpx",
+    "interpolate_route",
+    "parse_gpx_route",
+    "DEMO_ROUTE_KUWAIT",
+    "DEMO_ROUTE_SF",
+    #dedup
+    "deduplicate",
+    "EnrichedDetection",
+    "filter_by_confidence",
+    "filter_by_severity",
 ]

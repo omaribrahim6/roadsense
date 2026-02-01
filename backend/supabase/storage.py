@@ -1,5 +1,6 @@
 """Supabase storage module - manages image uploads and public URLs"""
 
+import mimetypes
 from pathlib import Path
 from typing import Optional
 
