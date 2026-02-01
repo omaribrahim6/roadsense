@@ -55,13 +55,13 @@ class GPSPoint:
     timestamp: Optional[float] = None
 
 # Demo routes for testing
-DEMO_ROUTE_KUWAIT = [
-    (45.2696111, -75.8578056),  # Ottawa demo fallback (Eagleson Rd)
+DEMO_ROUTE_OTTAWA = [
+    (45.2696111, -75.8578056),  # Eagleson Rd demo fallback
     (45.2685889, -75.8572389),
     (45.2675667, -75.8566722),
     (45.2665444, -75.8561056),
     (45.2655222, -75.8555389),
-    (45.2645000, -75.8549722),  #end
+    (45.2645000, -75.8549722),  # end
 ]
 
 DEMO_ROUTE_SF = [
@@ -120,7 +120,7 @@ def simulate_gps(
 ) -> Tuple[float, float]:
     """Simulate gps coordinates based on timestamp and route"""
     if route is None:
-        route = DEMO_ROUTE_KUWAIT
+        route = DEMO_ROUTE_OTTAWA
     
     return interpolate_route(timestamp, route, total_duration)
 

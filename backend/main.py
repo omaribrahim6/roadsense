@@ -22,7 +22,7 @@ from config import (
 from pipeline.extractor import extract_frames, list_image_files, extract_gps_from_image
 from pipeline.inference import run_inference
 from pipeline.severity import calculate_severity
-from pipeline.gps import simulate_gps, parse_gpx_route, DEMO_ROUTE_KUWAIT, DEMO_ROUTE_SF
+from pipeline.gps import simulate_gps, parse_gpx_route, DEMO_ROUTE_OTTAWA, DEMO_ROUTE_SF
 from pipeline.dedup import deduplicate, EnrichedDetection
 from utils.logger import setup_logger, get_logger
 
@@ -47,7 +47,7 @@ def cli():
 @click.option("--dry-run", is_flag=True, help="output json without uploading")
 @click.option("--output", "-o", "output_path", default=None, help="output file for dry run")
 @click.option("--no-dedup", is_flag=True, help="skip deduplication")
-@click.option("--route", type=click.Choice(["kuwait", "sf", "custom"]), default="kuwait", help="demo route")
+@click.option("--route", type=click.Choice(["ottawa", "sf", "custom"]), default="ottawa", help="demo route")
 def process(
     input_path: str,
     source_id: str,
@@ -154,7 +154,7 @@ def process(
         if route == "sf":
             gps_route = DEMO_ROUTE_SF
         else:
-            gps_route = DEMO_ROUTE_KUWAIT
+            gps_route = DEMO_ROUTE_OTTAWA
         logger.info(f"  Using simulated route: {route}")
     
     #enrich detections with gps

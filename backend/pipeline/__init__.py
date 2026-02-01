@@ -29,7 +29,7 @@ from .gps import (
     match_gpx,
     interpolate_route,
     parse_gpx_route,
-    DEMO_ROUTE_KUWAIT,
+    DEMO_ROUTE_OTTAWA,
     DEMO_ROUTE_SF,
 )
 
@@ -65,7 +65,7 @@ __all__ = [
     "match_gpx",
     "interpolate_route",
     "parse_gpx_route",
-    "DEMO_ROUTE_KUWAIT",
+    "DEMO_ROUTE_OTTAWA",
     "DEMO_ROUTE_SF",
     #dedup
     "deduplicate",

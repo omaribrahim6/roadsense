@@ -63,22 +63,22 @@ class TestGPS:
     """tests for gps resolution"""
     
     def test_simulate_gps_start(self):
-        from pipeline.gps import simulate_gps, DEMO_ROUTE_KUWAIT
+        from pipeline.gps import simulate_gps, DEMO_ROUTE_OTTAWA
         
-        lat, lng = simulate_gps(0.0, DEMO_ROUTE_KUWAIT, 60.0)
+        lat, lng = simulate_gps(0.0, DEMO_ROUTE_OTTAWA, 60.0)
         
         #should be at start of route
-        assert lat == DEMO_ROUTE_KUWAIT[0][0]
-        assert lng == DEMO_ROUTE_KUWAIT[0][1]
+        assert lat == DEMO_ROUTE_OTTAWA[0][0]
+        assert lng == DEMO_ROUTE_OTTAWA[0][1]
     
     def test_simulate_gps_end(self):
-        from pipeline.gps import simulate_gps, DEMO_ROUTE_KUWAIT
+        from pipeline.gps import simulate_gps, DEMO_ROUTE_OTTAWA
         
-        lat, lng = simulate_gps(60.0, DEMO_ROUTE_KUWAIT, 60.0)
+        lat, lng = simulate_gps(60.0, DEMO_ROUTE_OTTAWA, 60.0)
         
         #should be at end of route
-        assert lat == DEMO_ROUTE_KUWAIT[-1][0]
-        assert lng == DEMO_ROUTE_KUWAIT[-1][1]
+        assert lat == DEMO_ROUTE_OTTAWA[-1][0]
+        assert lng == DEMO_ROUTE_OTTAWA[-1][1]
     
     def test_interpolate_midpoint(self):
         from pipeline.gps import interpolate_route

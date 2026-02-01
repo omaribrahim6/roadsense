@@ -123,19 +123,28 @@ flowchart TB
 /backend
 ├── main.py                 # CLI entry point
 ├── requirements.txt        # Python dependencies
-├── config.py              # Configuration
+├── config.py               # Configuration
 ├── pipeline/
-│   ├── extractor.py       # Video frame extraction
-│   ├── inference.py       # YOLO model inference
-│   ├── severity.py        # Severity scoring
-│   ├── gps.py             # GPS resolution
-│   └── dedup.py           # Deduplication
-├── supabase/
-│   ├── client.py          # Supabase client
-│   ├── storage.py         # Image upload
-│   └── database.py        # Detection insertion
+│   ├── extractor.py        # Video frame extraction
+│   ├── inference.py        # YOLO model inference
+│   ├── severity.py         # Severity scoring
+│   ├── gps.py              # GPS resolution
+│   └── dedup.py            # Deduplication
+├── db/
+│   ├── client.py           # Supabase client
+│   ├── storage.py          # Image upload
+│   └── database.py         # Detection insertion
+├── utils/
+│   ├── bbox.py             # Bounding box utilities
+│   └── logger.py           # Logging setup
+├── routes/
+│   └── ottawa_eagleson_1km.gpx  # Demo GPX route
+├── scripts/
+│   └── setup_supabase.sql  # Database schema setup
+├── tests/
+│   └── test_pipeline.py    # Unit tests
 └── models/
-    └── weights/           # YOLO model weights
+    └── weights/            # YOLO model weights
 ```
 
 ## Detection Data Contract
@@ -181,6 +190,23 @@ CREATE INDEX idx_detections_source ON detections(source_id);
 CREATE INDEX idx_detections_type ON detections(damage_type);
 CREATE INDEX idx_detections_severity ON detections(severity);
 CREATE INDEX idx_detections_location ON detections(lat, lng);
+CREATE INDEX idx_detections_created ON detections(created_at DESC);
+CREATE INDEX idx_detections_status ON detections(status);
+```
+
+### Table: `sources` (optional)
+
+```sql
+CREATE TABLE sources (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    description TEXT,
+    video_path TEXT,
+    frame_count INTEGER,
+    detection_count INTEGER,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    completed_at TIMESTAMPTZ
+);
 ```
 
 ### Storage Bucket
@@ -227,13 +253,25 @@ cd backend
 pip install -r requirements.txt
 ```
 
-Create `.env` file:
+Create `.env` file (see `.env.example`):
 
 ```
+# Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
-YOLO_MODEL_PATH=./models/weights/best.pt
+
+# YOLO Model Configuration
+# Option 1: HuggingFace model (default)
+YOLO_MODEL_PATH=cazzz307/Pothole-Finetuned-YoloV8
+# Option 2: Local model file
+# YOLO_MODEL_PATH=./models/weights/best.pt
+
+# Detection Settings
 DEFAULT_CONFIDENCE_THRESHOLD=0.25
+DEFAULT_FPS=1
+
+# HuggingFace Authentication (required for gated models)
+HF_TOKEN=your-huggingface-token
 ```
 
 ## Backend CLI Usage
@@ -263,6 +301,18 @@ python main.py process --input video.mp4 --dry-run --output detections.json
 | `--conf-threshold` | Minimum confidence | 0.25 |
 | `--dry-run` | Output JSON without upload | False |
 | `--output` | Output file for dry run | None |
+| `--no-dedup` | Skip deduplication | False |
+| `--route` | Demo route: ottawa, sf, or custom | ottawa |
+
+### Additional CLI Commands
+
+```bash
+# Test Supabase connection
+python main.py test-connection
+
+# Get detection statistics for a source
+python main.py stats --source-id demo_run_1
+```
 
 ## Dependencies
 
@@ -284,6 +334,11 @@ gpxpy>=1.6.0            # GPX parsing
 click>=8.0.0            # CLI framework
 numpy>=1.24.0           # Numerical operations
 haversine>=2.8.0        # GPS distance calculations
+pillow>=10.0.0          # Image processing
+pillow-heif>=0.13.0     # HEIF image support
+piexif>=1.1.3           # EXIF metadata parsing
+supervision>=0.16.0     # Detection utilities
+huggingface_hub>=0.20.0 # Model downloading
 ```
 
 ## Team Responsibilities
