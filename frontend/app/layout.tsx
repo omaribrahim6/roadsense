@@ -15,8 +15,8 @@ const body = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "NodeSense | Road Damage Intelligence",
-  description: "NodeSense hackathon dashboard for road damage detections."
+  title: "RoadSense | Road Damage Intelligence",
+  description: "RoadSense platform for road damage detection and response."
 };
 
 export default function RootLayout({

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Detection } from "@/data/types";
 import { fetchDetections } from "@/services/detections";
@@ -51,9 +52,10 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastUpdated, setLastUpdated] = useState("");
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -177,7 +179,7 @@ export default function Dashboard() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "nodesense-detections.csv";
+    link.download = "roadsense-detections.csv";
     link.click();
     window.URL.revokeObjectURL(url);
   };
@@ -197,32 +199,19 @@ export default function Dashboard() {
   return (
     <div className="app-shell">
       <aside className="rail">
-        <div className="rail-logo">NS</div>
+        <div className="rail-logo">RS</div>
         <div className="rail-nav">
-          {[
-            "Map",
-            "Alerts",
-            "Routes",
-            "Uploads",
-            "Settings"
-          ].map((item, index) => (
-            <div
-              key={item}
-              className={`rail-button ${index === 0 ? "active" : ""}`}
-              title={item}
-            >
-              <span>{item.slice(0, 1)}</span>
-            </div>
-          ))}
+          <Link className="rail-button active" href="/" title="Home">
+            <span>H</span>
+          </Link>
         </div>
-        <div className="rail-button">?</div>
       </aside>
 
       <main className="workspace">
         <header className="topbar">
           <div className="brand">
             <div>
-              <h1>NodeSense</h1>
+              <h1>RoadSense</h1>
               <span>Road damage intelligence console</span>
             </div>
           </div>
