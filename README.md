@@ -57,10 +57,10 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     participant CLI as main.py
-    participant Ext as Extractor
+    participant Ext as Extractor (Frame Extraction)
     participant YOLO as Inference
     participant Sev as Severity
-    participant GPS as GPS Resolver
+    participant GPS as Extractor (GPS Resolver)
     participant Dup as Deduplicator
     participant Store as Storage
     participant DB as Database
@@ -125,10 +125,10 @@ flowchart TB
 ├── requirements.txt        # Python dependencies
 ├── config.py               # Configuration
 ├── pipeline/
-│   ├── extractor.py        # Video frame extraction
+│   ├── extractor.py        # Video frame extraction & metadata resolution
 │   ├── inference.py        # YOLO model inference
 │   ├── severity.py         # Severity scoring
-│   ├── gps.py              # GPS resolution
+│   ├── gps.py              # GPS resolution (testing)
 │   └── dedup.py            # Deduplication
 ├── db/
 │   ├── client.py           # Supabase client
