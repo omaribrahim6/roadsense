@@ -72,6 +72,8 @@ DEMO_ROUTE_SF = [
     (37.7770, -122.4120),  #end
 ]
 
+
+# Interpolation function - This function uses timestamps 
 def interpolate_route(
     timestamp: float,
     route: List[Tuple[float, float]],
