@@ -11,6 +11,7 @@ type MapViewProps = {
   onSelect?: (id: string) => void;
 };
 
+//AI made this function
 function pointNearLine(
   point: [number, number],
   line: [number, number][],
@@ -54,6 +55,7 @@ function pointNearLine(
 
   return false;
 }
+//End of AI code
 
 export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
