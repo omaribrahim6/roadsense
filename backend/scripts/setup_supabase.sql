@@ -1,6 +1,4 @@
 -- RoadSense Supabase Database Schema
--- Run this in the Supabase SQL Editor
-
 -- create detections table
 CREATE TABLE IF NOT EXISTS detections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -12,7 +12,9 @@ MODELS_DIR = BASE_DIR / "models" / "weights"
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", str(MODELS_DIR / "best.pt"))
+# Model path: can be a local .pt file or HuggingFace model ID
+# Default: HuggingFace pothole detection model
+YOLO_MODEL_PATH = os.getenv("YOLO_MODEL_PATH", "cazzz307/Pothole-Finetuned-YoloV8")
 DEFAULT_CONFIDENCE_THRESHOLD = float(os.getenv("DEFAULT_CONFIDENCE_THRESHOLD", "0.25"))
 
 DEFAULT_FPS = int(os.getenv("DEFAULT_FPS", "1"))
