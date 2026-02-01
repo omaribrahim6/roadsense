@@ -55,26 +55,6 @@ function pointNearLine(
   return false;
 }
 
-function updateRoadPinStates(map: maplibregl.Map, detections: Detection[]) {
-  const roadFeatures = map.querySourceFeatures("roads");
-
-  for (const feature of roadFeatures) {
-    if (!feature.id || feature.geometry.type !== "LineString") continue;
-
-    const roadCoords = feature.geometry.coordinates as [number, number][];
-
-    const hasPins = detections.some((d) =>
-      pointNearLine([d.lng, d.lat], roadCoords, 50)
-    );
-
-    map.setFeatureState(
-      { source: "roads", id: feature.id },
-      { hasPins }
-    );
-  }
-}
-
-
 export default function MapView({ data, selectedId, onSelect }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
