@@ -1,14 +1,14 @@
 ﻿import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { Orbitron, Sora } from "next/font/google";
 import "./globals.css";
 
-const display = Space_Grotesk({
+const display = Orbitron({
   subsets: ["latin"],
   variable: "--font-display",
   weight: ["400", "500", "600", "700"]
 });
 
-const body = Manrope({
+const body = Sora({
   subsets: ["latin"],
   variable: "--font-body",
   weight: ["400", "500", "600", "700"]
@@ -16,7 +16,13 @@ const body = Manrope({
 
 export const metadata: Metadata = {
   title: "RoadSense | Road Damage Intelligence",
-  description: "RoadSense platform for road damage detection and response."
+  description: "RoadSense platform for road damage detection and response.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-32x32.png",
+    apple: "/apple-touch-icon.png"
+  },
+  manifest: "/site.webmanifest"
 };
 
 export default function RootLayout({

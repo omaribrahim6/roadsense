@@ -211,7 +211,7 @@ export default function Dashboard() {
         <header className="topbar">
           <div className="brand">
             <div>
-              <h1>RoadSense</h1>
+              <h1>ROADSENSE</h1>
               <span>Road damage intelligence console</span>
             </div>
           </div>
